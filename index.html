@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NyaySahay | AI Legal Assistant</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#111c2e;--line:#26364d;--gold:#f5b942;--muted:#9aabc1}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#edf3fb;font:15px/1.5 Inter,system-ui,Arial}
+header{padding:22px max(5vw,20px);background:linear-gradient(120deg,#101c31,#1c2a40);border-bottom:1px solid var(--line)}
+h1{margin:0;color:var(--gold);font-size:25px}header p{margin:5px 0 0;color:var(--muted)}
+main{max-width:1100px;margin:25px auto;padding:0 18px;display:grid;grid-template-columns:280px 1fr;gap:18px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:17px;min-width:0}
+h2{font-size:17px;margin:0 0 12px}label{display:block;color:var(--muted);font-size:13px;margin:12px 0 5px}
+input,select,textarea,button{font:inherit;border-radius:8px;border:1px solid var(--line);padding:10px;background:#0c1728;color:#edf3fb;width:100%}
+button{background:#b7791f;color:#111827;font-weight:700;border:0;cursor:pointer;margin-top:10px}button:disabled{opacity:.5}
+#messages{height:430px;overflow:auto;display:flex;flex-direction:column;gap:12px;padding:5px}
+.msg{padding:12px 14px;border-radius:10px;white-space:pre-wrap;max-width:95%}.user{align-self:flex-end;background:#253b59}.assistant{align-self:flex-start;background:#18283d;border:1px solid var(--line)}
+.chatrow{display:grid;grid-template-columns:1fr 110px;gap:8px;margin-top:12px}.chatrow button{margin:0}
+.small{font-size:12px;color:var(--muted)}.alert{background:#451a1a;border:1px solid #8b3030;padding:10px;border-radius:8px;margin:16px 0;color:#ffdada}
+#facts{font-size:13px;color:#c8d7e8;white-space:pre-wrap}.hidden{display:none}
+@media(max-width:760px){main{grid-template-columns:1fr}#messages{height:380px}}
+</style></head>
+<body>
+<header><h1>⚖️ NyaySahay</h1><p>AI legal assistant for Indian cybercrime and banking fraud · Hindi · Hinglish · English</p></header>
+<main>
+<aside class="panel">
+<h2>Case & AI settings</h2>
+<label>Response language</label><select id="language"><option value="auto">Auto detect</option><option value="hinglish">Hinglish</option><option value="hindi">Hindi</option><option value="english">English</option></select>
+<label>AI provider</label><select id="provider"><option value="local">Built-in legal engine (free)</option><option value="openai">OpenAI</option></select>
+<label>API key (optional)</label><input id="key" type="password" placeholder="Provider API key">
+<label>Upload evidence (PDF, TXT, image)</label><input id="file" type="file" accept=".pdf,.txt,.png,.jpg,.jpeg">
+<button id="upload">Extract case facts</button>
+<div id="facts" class="small">No evidence uploaded yet.</div>
+<div class="alert">🚨 Recent financial cyber fraud? Call <b>1930</b> immediately and report at <a href="https://cybercrime.gov.in" target="_blank" rel="noreferrer">cybercrime.gov.in</a>.</div>
+<p class="small">Do not upload passwords, PINs, OTPs, or full card credentials. This tool provides legal information, not attorney-client representation.</p>
+</aside>
+<section class="panel">
+<h2>💬 Legal chat</h2><div id="messages"><div class="msg assistant">Namaste! I’m NyaySahay. Tell me what happened. You can write in Hindi, Hinglish, or English.</div></div>
+<div class="chatrow"><input id="message" placeholder="Describe your cybercrime or banking issue..." autocomplete="off"><button id="send">Send</button></div>
+<p class="small">Legal information is educational. Verify current rules and consult a qualified advocate for case-specific advice.</p>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id);let history=[],caseFacts={};
+function add(role,text){const d=document.createElement('div');d.className='msg '+role;d.textContent=text;$('messages').appendChild(d);$('messages').scrollTop=$('messages').scrollHeight}
+async function send(){const message=$('message').value.trim();if(!message)return;$('message').value='';add('user',message);$('send').disabled=true;
+try{const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,history,case_facts:caseFacts,language:$('language').value,provider:$('provider').value,api_key:$('key').value||null})});const data=await r.json();if(!r.ok)throw Error(data.detail||'Request failed');add('assistant',data.answer||'No response received.');history.push({role:'user',content:message},{role:'assistant',content:data.answer||''});history=history.slice(-12)}catch(e){add('assistant','Error: '+e.message)}finally{$('send').disabled=false}}
+$('send').onclick=send;$('message').addEventListener('keydown',e=>{if(e.key==='Enter')send()});
+$('upload').onclick=async()=>{const f=$('file').files[0];if(!f){$('facts').textContent='Choose a file first.';return}const fd=new FormData();fd.append('file',f);$('upload').disabled=true;try{const r=await fetch('/api/extract',{method:'POST',body:fd});const d=await r.json();if(!r.ok)throw Error(d.detail||'Extraction failed');caseFacts=d.facts||{};$('facts').textContent=JSON.stringify(caseFacts,null,2);add('assistant','I extracted the available evidence facts. Please verify them before relying on them.')}catch(e){$('facts').textContent='Error: '+e.message}finally{$('upload').disabled=false}};
+</script></body></html>\n
